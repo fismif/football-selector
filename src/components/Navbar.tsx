@@ -5,7 +5,7 @@ export function Navbar() {
     <nav className="navbar">
       <div className="navbar-brand">
         <span className="navbar-icon">⚽</span>
-        <span className="navbar-title">FootballPro</span>
+        <span className="navbar-title">Football Group – ALB 🇦🇱</span>
       </div>
       <div className="navbar-links">
         <NavLink to="/players" className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>

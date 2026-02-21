@@ -15,8 +15,10 @@ export function MatchCreatePage() {
 
   const today = new Date().toISOString().slice(0, 10);
   const [date, setDate] = useState(today);
-  const [time, setTime] = useState('10:00');
+  const [time, setTime] = useState('20:00');
+  const [endTime, setEndTime] = useState('21:00');
   const [venue, setVenue] = useState('');
+  const [fee, setFee] = useState<number>(0);
   const [playerIds, setPlayerIds] = useState<string[]>([]);
   const [waitlistIds, setWaitlistIds] = useState<string[]>([]);
 
@@ -29,6 +31,8 @@ export function MatchCreatePage() {
       .catch((e: unknown) => showToastRef.current(e instanceof Error ? e.message : 'Failed to load players', 'error'))
       .finally(() => setLoading(false));
   }, []);
+
+  const feePerPlayer = playerIds.length > 0 ? Math.ceil(fee / 14) : 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,7 +47,9 @@ export function MatchCreatePage() {
         id: crypto.randomUUID(),
         date,
         time,
+        endTime,
         venue: venue.trim(),
+        fee,
         playerIds,
         waitlistIds,
         teamWhite: [],
@@ -79,15 +85,33 @@ export function MatchCreatePage() {
               <input className="form-input" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
             </div>
             <div className="form-group">
-              <label className="form-label">⏰ Time</label>
+              <label className="form-label">⏰ Start Time</label>
               <input className="form-input" type="time" value={time} onChange={(e) => setTime(e.target.value)} required />
+            </div>
+            <div className="form-group">
+              <label className="form-label">⏰ End Time</label>
+              <input className="form-input" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} required />
             </div>
           </div>
 
           <div className="form-group">
             <label className="form-label">📍 Venue</label>
-            <input className="form-input" type="text" placeholder="e.g. City Park Pitch 1"
+            <input className="form-input" type="text" placeholder="e.g. Hopsagasse 5, 1200 Wien"
               value={venue} onChange={(e) => setVenue(e.target.value)} required />
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label className="form-label">💰 Total Fee (€)</label>
+              <input className="form-input" type="number" min="0" step="1" placeholder="e.g. 65"
+                value={fee || ''} onChange={(e) => setFee(Number(e.target.value))} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">👤 Per Player (€)</label>
+              <div className="form-input fee-display">
+                ~{feePerPlayer}€ / person
+              </div>
+            </div>
           </div>
 
           {allPlayers.length < 14 ? (

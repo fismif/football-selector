@@ -30,34 +30,57 @@ function TeamColumn({ title, color, playerIds, allPlayers }: {
   );
 }
 
+const ALBANIAN_DAYS: Record<number, string> = {
+  0: 'E Diel',
+  1: 'E Hënë',
+  2: 'E Martë',
+  3: 'E Mërkurë',
+  4: 'E Enjte',
+  5: 'E Premte',
+  6: 'E Shtunë',
+};
+
 function WhatsAppTemplate({ match, allPlayers }: { match: Match; allPlayers: Player[] }) {
   const { showToast } = useToast();
 
-  let formattedDate = match.date;
+  // Albanian day name
+  let dayName = '';
   try {
-    formattedDate = format(new Date(match.date + 'T00:00:00'), 'EEEE, dd MMMM yyyy');
+    const d = new Date(match.date + 'T00:00:00');
+    dayName = ALBANIAN_DAYS[d.getDay()] ?? '';
   } catch { /* noop */ }
 
-  const white = match.teamWhite.map((id) => allPlayers.find((p) => p.id === id)?.name ?? id);
+  const feePerPlayer = Math.ceil(match.fee / 14);
+
   const black = match.teamBlack.map((id) => allPlayers.find((p) => p.id === id)?.name ?? id);
-  const waitlist = match.waitlistIds.map((id) => allPlayers.find((p) => p.id === id)?.name ?? id);
+  const white = match.teamWhite.map((id) => allPlayers.find((p) => p.id === id)?.name ?? id);
 
   const msg = [
-    `⚽ *Football – ${formattedDate} @ ${match.time}*`,
-    `📍 *Venue:* ${match.venue}`,
+    `*INFORMACIONE*`,
     ``,
-    `👕 *White Team*`,
-    white.map((n, i) => `${i + 1}. ${n}`).join('\n'),
+    `📆⏲️ ${dayName}, *${match.time} - ${match.endTime}*`,
+    `📍 ${match.venue}`,
+    match.fee > 0 ? `💰 *${match.fee}€ fusha (~${feePerPlayer}€/person)*` : '',
     ``,
-    `🎽 *Black Team*`,
-    black.map((n, i) => `${i + 1}. ${n}`).join('\n'),
-    waitlist.length > 0 ? `\n⏳ *Waiting List*\n${waitlist.map((n, i) => `${i + 1}. ${n}`).join('\n')}` : '',
+    `*RREGULLAT:*`,
     ``,
-    `🏃 See you on the pitch! Let's go! 💪`,
-  ].join('\n');
+    `- *_Secili lojtar i cili vjen ne nje termin eshte i obliguar te tregoje sjellje njerezore dhe fair me te tjeret, qe nenkupton te zhvilloje loje me kujdes, pa tentuar t'i lendoj apo ofendoj ata. Nje sjellje jokonform kesaj rregulle pason me largim nga grupi._*`,
+    ``,
+    `- *Kush konfirmon e pastaj nuk lajmerohet qe nuk vjen deri para dites qe luhet termini ose nuk gjen zevendesues ate dite i heket mundesia pa perjashtim te jete pjese e grupit. Konfirmimi nenkupton votimin ne poll/shkrimin e emrit ne lista pas daljes se pollit*`,
+    ``,
+    `- *_Duhet te jeni 5 minuta para fillimit te terminit tek fusha, ne menyre qe te evitohen vonesat. Ne menyre qe te garantojme korrektesi per te gjithe pjesemarresit, mosrespektimi i kesaj rregulle sjell ne suspendim per 2 terminat e radhes. Thyerja e perseritur e kesaj rregulle pason me largim nga grupi._*`,
+    ``,
+    `*NDARJA E EKIPEVE*`,
+    ``,
+    `Ekipa 1 (ZI 🏴): ${black.join(', ')}`,
+    ``,
+    `Ekipa 2 (BARDH 🏳️): ${white.join(', ')}`,
+    ``,
+    `‼️ *Ju lutem ti veshni fanellat me ngjyra perkatese per loje me te pershtatshme. Gjithashtu, pagesen e parapare per termin ta keni me vete (cash).*‼️`,
+  ].filter((l) => l !== undefined).join('\n');
 
   function copy() {
-    navigator.clipboard.writeText(msg).then(() => showToast('Message copied to clipboard!', 'info'));
+    navigator.clipboard.writeText(msg).then(() => showToast('Mesazhi u kopjua!', 'info'));
   }
 
   return (
@@ -70,6 +93,7 @@ function WhatsAppTemplate({ match, allPlayers }: { match: Match; allPlayers: Pla
     </div>
   );
 }
+
 
 export function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -179,11 +203,14 @@ export function MatchDetailPage() {
       <div className="match-info-card">
         <div className="match-info-row">
           <span>📅 <strong>{formattedDate}</strong></span>
-          <span>⏰ <strong>{match.time}</strong></span>
+          <span>⏰ <strong>{match.time}{match.endTime ? ` – ${match.endTime}` : ''}</strong></span>
           <span>📍 <strong>{match.venue}</strong></span>
         </div>
         <div className="match-info-row">
           <span>👥 <strong>{match.playerIds.length} players</strong></span>
+          {match.fee > 0 && (
+            <span>💰 <strong>{match.fee}€</strong> (~{Math.ceil(match.fee / 14)}€/person)</span>
+          )}
           {waitlistPlayers.length > 0 && <span>⏳ <strong>{waitlistPlayers.length} on waitlist</strong></span>}
           <span className={assigned ? 'status-assigned' : 'status-pending'}>
             {assigned ? '✅ Teams assigned' : '⏸️ Teams not yet assigned'}

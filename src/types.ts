@@ -13,7 +13,9 @@ export interface Match {
   id: string;
   date: string; // YYYY-MM-DD
   time: string; // HH:MM
+  endTime: string; // HH:MM
   venue: string;
+  fee: number; // total field rental cost in €
   playerIds: string[]; // 14 selected player IDs
   waitlistIds: string[];
   teamWhite: string[]; // player IDs
