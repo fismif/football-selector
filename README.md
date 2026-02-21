@@ -1,73 +1,95 @@
-# React + TypeScript + Vite
+# Football Group – ALB 🇦🇱
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A lightweight web app for organising weekly football matches within a private group. Built to handle the full match lifecycle — from managing the player roster to generating a ready-to-paste WhatsApp announcement.
 
-Currently, two official plugins are available:
+## What it does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+### 👤 Player management
+- Add, edit, and delete players from a shared roster
+- Each player has five attributes rated 1–10:
+  - **Skills** — technical ability
+  - **Stamina** — endurance over the match
+  - **Physicality** — strength and aerial ability
+  - **Team Player** — tactical and cooperative play
+  - **Attack / Defence** — positional tendency (0 = pure defender, 10 = pure attacker)
 
-## React Compiler
+### 🗓️ Match management
+- Create a match with date, start/end time, venue, and total field fee
+- Select exactly 14 players from the roster (+ optional waitlist)
+- Per-player fee is calculated automatically from the total
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 🤖 Automatic team balancing
+- One click assigns players into two balanced teams of 7
+- The algorithm uses composite player scores + simulated annealing to minimise the skill gap between teams
+- Teams can be re-shuffled at any time
 
-## Expanding the ESLint configuration
+### 📲 WhatsApp message generator
+- Generates a fully formatted Albanian-language match announcement
+- Includes day name, time slot, venue, fee, team rosters (Ekipa ZI / Ekipa BARDH), and the group rules
+- Copy to clipboard with one click — paste directly into WhatsApp
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Tech stack
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+| Layer | Technology |
+|---|---|
+| Frontend | React + TypeScript (Vite) |
+| Database | Supabase (Postgres) |
+| Hosting | Vercel |
+| Team algorithm | Composite scoring + simulated annealing |
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+## Setup
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+# 1. Clone and install
+npm install
+
+# 2. Create .env (copy from .env.example)
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+
+# 3. Run the SQL schema in Supabase SQL Editor (see below)
+
+# 4. Start locally
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Supabase schema
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+```sql
+create table players (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  attack_defense numeric not null default 5,
+  stamina numeric not null default 7,
+  skills numeric not null default 7,
+  team_player numeric not null default 7,
+  physicality numeric not null default 7,
+  created_at timestamptz default now()
+);
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+create table matches (
+  id uuid primary key default gen_random_uuid(),
+  date text not null,
+  time text not null,
+  end_time text default '',
+  venue text not null,
+  fee numeric default 0,
+  player_ids text[] default '{}',
+  waitlist_ids text[] default '{}',
+  team_white text[] default '{}',
+  team_black text[] default '{}',
+  created_at timestamptz default now()
+);
+
+alter table players enable row level security;
+alter table matches enable row level security;
+create policy "public_all" on players for all using (true) with check (true);
+create policy "public_all" on matches for all using (true) with check (true);
 ```
+
+## Deploying to Vercel
+
+1. Push this repo to GitHub
+2. Import the repo at [vercel.com](https://vercel.com)
+3. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as environment variables
+4. Deploy — all group members share the same database via the public URL
