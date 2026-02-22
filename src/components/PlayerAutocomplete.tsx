@@ -76,6 +76,12 @@ export function PlayerAutocomplete({
             value={query}
             onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
             onFocus={() => setOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && open && results.length > 0) {
+                e.preventDefault();
+                handleSelect(results[0].id);
+              }
+            }}
           />
           {open && results.length > 0 && (
             <ul className="autocomplete-dropdown">
