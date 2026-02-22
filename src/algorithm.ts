@@ -6,7 +6,7 @@ const WEIGHTS = {
   stamina: 0.25,
   physicality: 0.20,
   teamPlayer: 0.15,
-  attackDefense: 0.10, // balanced contribution
+  attackDefense: 0.10,
 };
 
 function compositeScore(p: Player): number {
@@ -15,7 +15,6 @@ function compositeScore(p: Player): number {
     p.stamina * WEIGHTS.stamina +
     p.physicality * WEIGHTS.physicality +
     p.teamPlayer * WEIGHTS.teamPlayer +
-    // Treat midpoint (5) as neutral; use deviation as "expressiveness"
     (10 - Math.abs(p.attackDefense - 5)) * WEIGHTS.attackDefense
   );
 }
@@ -33,22 +32,27 @@ function imbalance(a: Player[], b: Player[]): number {
 }
 
 /**
- * Assign 14 players into two balanced teams of 7.
+ * Assign an even number of players into two balanced teams.
+ * Supports 4v4 (8), 5v5 (10), 6v6 (12), 7v7 (14).
  * Returns { teamWhite, teamBlack } as arrays of player IDs.
  */
 export function assignTeams(players: Player[]): { teamWhite: string[]; teamBlack: string[] } {
-  if (players.length !== 14) throw new Error('Exactly 14 players required');
+  const total = players.length;
+  if (total < 2 || total % 2 !== 0) throw new Error('Player count must be an even number ≥ 2');
+
+  const half = total / 2;
 
   // 1. Sort by composite score descending
   const sorted = [...players].sort((a, b) => compositeScore(b) - compositeScore(a));
 
-  // 2. Snake draft: 1→W,2→B,3→B,4→W,5→W,6→B ... alternates in pairs
-  //    Pattern: W B B W W B B W W B B W W B
-  const snakePattern = [0, 1, 1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, 1]; // 0=white,1=black
-  let white: Player[] = [];
-  let black: Player[] = [];
+  // 2. Snake draft — alternates in pairs: W B B W W B B W ...
+  const white: Player[] = [];
+  const black: Player[] = [];
   sorted.forEach((p, i) => {
-    if (snakePattern[i] === 0) white.push(p);
+    const pair = Math.floor(i / 2);
+    const isEvenPair = pair % 2 === 0;
+    const isFirstInPair = i % 2 === 0;
+    if (isEvenPair ? isFirstInPair : !isFirstInPair) white.push(p);
     else black.push(p);
   });
 
@@ -63,9 +67,8 @@ export function assignTeams(players: Player[]): { teamWhite: string[]; teamBlack
   const cooling = Math.pow(0.001 / temp, 1 / ITERATIONS);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    // Pick random swap between teams
-    const wi = Math.floor(Math.random() * 7);
-    const bi = Math.floor(Math.random() * 7);
+    const wi = Math.floor(Math.random() * half);
+    const bi = Math.floor(Math.random() * half);
     const newWhite = [...current.white];
     const newBlack = [...current.black];
     [newWhite[wi], newBlack[bi]] = [newBlack[bi], newWhite[wi]];

@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Player, Match } from './types';
+import type { Player, Match, MatchFormat } from './types';
 
 // ── helpers: map DB row (snake_case) ↔ app type (camelCase) ────────────────
 
@@ -37,6 +37,7 @@ function rowToMatch(row: Record<string, unknown>): Match {
     endTime: (row.end_time as string) ?? '',
     venue: row.venue as string,
     fee: (row.fee as number) ?? 0,
+    format: ((row.format as string) ?? '7v7') as MatchFormat,
     playerIds: (row.player_ids as string[]) ?? [],
     waitlistIds: (row.waitlist_ids as string[]) ?? [],
     teamWhite: (row.team_white as string[]) ?? [],
@@ -53,6 +54,7 @@ function matchToRow(m: Match) {
     end_time: m.endTime,
     venue: m.venue,
     fee: m.fee,
+    format: m.format,
     player_ids: m.playerIds,
     waitlist_ids: m.waitlistIds,
     team_white: m.teamWhite,
@@ -90,7 +92,7 @@ export async function getMatches(): Promise<Match[]> {
   const { data, error } = await supabase
     .from('matches')
     .select('*')
-    .order('created_at', { ascending: false });
+    .order('date', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(rowToMatch);
 }

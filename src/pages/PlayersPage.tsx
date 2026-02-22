@@ -2,11 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { PlayerCard } from '../components/PlayerCard';
 import { PlayerForm } from '../components/PlayerForm';
 import { useToast } from '../components/Toast';
-import { getPlayers, upsertPlayer, deletePlayer } from '../storage';
-import type { Player } from '../types';
+import { getPlayers, upsertPlayer, deletePlayer, getMatches } from '../storage';
+import type { Player, Match } from '../types';
 
 export function PlayersPage() {
   const [players, setPlayers] = useState<Player[]>([]);
+  const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [editTarget, setEditTarget] = useState<Player | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -16,7 +17,9 @@ export function PlayersPage() {
   const refreshPlayers = useCallback(async () => {
     try {
       setLoading(true);
-      setPlayers(await getPlayers());
+      const [p, m] = await Promise.all([getPlayers(), getMatches()]);
+      setPlayers(p);
+      setMatches(m);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Failed to load players', 'error');
     } finally {
@@ -116,7 +119,7 @@ export function PlayersPage() {
           ) : (
             <div className="player-grid">
               {filtered.map((p) => (
-                <PlayerCard key={p.id} player={p} onEdit={handleEdit} onDelete={handleDelete} />
+                <PlayerCard key={p.id} player={p} recentMatches={matches} onEdit={handleEdit} onDelete={handleDelete} />
               ))}
             </div>
           )}

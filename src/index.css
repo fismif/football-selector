@@ -1108,3 +1108,231 @@ body {
     flex-direction: column;
   }
 }
+
+/* ── Format Picker ── */
+.format-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.format-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 20px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.format-btn:hover {
+  border-color: var(--green);
+  color: var(--text-primary);
+}
+
+.format-btn.active {
+  background: var(--green-dim);
+  border-color: var(--green);
+  color: var(--green);
+  box-shadow: 0 0 12px var(--green-glow);
+}
+
+.format-sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.format-btn.active .format-sub {
+  color: var(--green);
+  opacity: 0.8;
+}
+
+/* ── Fee display ── */
+.fee-display {
+  color: var(--text-secondary);
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+}
+
+/* ── Warning box ── */
+.warning-box {
+  background: rgba(250, 204, 21, 0.08);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  font-size: 14px;
+  color: var(--accent-yellow);
+}
+
+
+/* ── Player Hover Card ── */
+.player-hover-card {
+  position: fixed;
+  z-index: 9999;
+  width: 264px;
+  background: var(--bg-surface);
+  border: 1px solid var(--green);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7), 0 0 24px var(--green-glow);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px) scale(0.97);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.player-hover-card.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+/* ── hoverable team list item ── */
+.team-list-item.hoverable {
+  cursor: default;
+}
+.team-list-item.hoverable:hover {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: var(--green-glow);
+}
+
+/* ── Drag-drop swap area ── */
+.swap-area {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.swap-list {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.swap-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-light);
+  background: var(--bg-elevated);
+}
+
+.swap-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 40px;
+}
+
+.draggable-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  font-size: 14px;
+  cursor: grab;
+  border-bottom: 1px solid var(--border-light);
+  transition: background 0.1s ease;
+  user-select: none;
+}
+
+.draggable-player:last-child {
+  border-bottom: none;
+}
+
+.draggable-player:hover {
+  background: rgba(34, 197, 94, 0.06);
+}
+
+.draggable-player.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+
+.draggable-player.drag-over {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: var(--green);
+  box-shadow: inset 0 0 0 1px var(--green);
+}
+
+.drag-handle {
+  color: var(--text-muted);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.draggable-pos {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.draggable-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.swap-divider {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  color: var(--text-muted);
+  padding-top: 48px; /* align with list items */
+}
+
+.swap-empty-drop {
+  padding: 16px 14px;
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  font-style: italic;
+  border: 2px dashed var(--border);
+  border-radius: var(--radius-sm);
+  margin: 8px;
+}
+
+/* ── Participation dots ── */
+.participation-row {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-light);
+  margin-top: 4px;
+}
+
+.part-dot {
+  font-size: 15px;
+  line-height: 1;
+}
+
+.part-empty {
+  opacity: 0.4;
+  filter: grayscale(1);
+}
+
+@media (max-width: 640px) {
+  .swap-area {
+    grid-template-columns: 1fr;
+  }
+  .swap-divider {
+    padding-top: 0;
+    transform: rotate(90deg);
+  }
+}

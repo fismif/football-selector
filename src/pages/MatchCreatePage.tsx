@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { PlayerAutocomplete } from '../components/PlayerAutocomplete';
 import { useToast } from '../components/Toast';
 import { getPlayers, upsertMatch } from '../storage';
-import type { Match, Player } from '../types';
+import type { Match, Player, MatchFormat } from '../types';
+import { FORMAT_PLAYERS } from '../types';
+
+const FORMATS: MatchFormat[] = ['4v4', '5v5', '6v6', '7v7'];
 
 export function MatchCreatePage() {
   const navigate = useNavigate();
@@ -19,8 +22,11 @@ export function MatchCreatePage() {
   const [endTime, setEndTime] = useState('21:00');
   const [venue, setVenue] = useState('');
   const [fee, setFee] = useState<number>(0);
+  const [format, setFormat] = useState<MatchFormat>('7v7');
   const [playerIds, setPlayerIds] = useState<string[]>([]);
   const [waitlistIds, setWaitlistIds] = useState<string[]>([]);
+
+  const requiredPlayers = FORMAT_PLAYERS[format];
 
   const showToastRef = useRef(showToast);
   useEffect(() => { showToastRef.current = showToast; });
@@ -32,13 +38,20 @@ export function MatchCreatePage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const feePerPlayer = playerIds.length > 0 ? Math.ceil(fee / 14) : 0;
+  // When format changes, trim player list if it exceeds the new limit
+  useEffect(() => {
+    if (playerIds.length > requiredPlayers) {
+      setPlayerIds((prev) => prev.slice(0, requiredPlayers));
+    }
+  }, [format, requiredPlayers, playerIds.length]);
+
+  const feePerPlayer = playerIds.length > 0 ? Math.ceil(fee / playerIds.length) : 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!venue.trim()) return;
-    if (playerIds.length !== 14) {
-      showToast('Please select exactly 14 players', 'error');
+    if (playerIds.length !== requiredPlayers) {
+      showToast(`Please select exactly ${requiredPlayers} players for ${format}`, 'error');
       return;
     }
     setSaving(true);
@@ -50,6 +63,7 @@ export function MatchCreatePage() {
         endTime,
         venue: venue.trim(),
         fee,
+        format,
         playerIds,
         waitlistIds,
         teamWhite: [],
@@ -71,7 +85,7 @@ export function MatchCreatePage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">➕ New Match</h1>
-          <p className="page-subtitle">Fill in details and select your 14 players</p>
+          <p className="page-subtitle">Fill in details and select your players</p>
         </div>
       </div>
 
@@ -79,6 +93,24 @@ export function MatchCreatePage() {
         <div className="empty-state"><div className="spinner" />Loading players…</div>
       ) : (
         <form className="match-form" onSubmit={handleSubmit}>
+          {/* Format picker */}
+          <div className="form-group">
+            <label className="form-label">⚽ Format</label>
+            <div className="format-picker">
+              {FORMATS.map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  className={`format-btn${format === f ? ' active' : ''}`}
+                  onClick={() => setFormat(f)}
+                >
+                  {f}
+                  <span className="format-sub">{FORMAT_PLAYERS[f]} players</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="form-row">
             <div className="form-group">
               <label className="form-label">📅 Date</label>
@@ -109,22 +141,25 @@ export function MatchCreatePage() {
             <div className="form-group">
               <label className="form-label">👤 Per Player (€)</label>
               <div className="form-input fee-display">
-                ~{feePerPlayer}€ / person
+                {playerIds.length > 0
+                  ? `~${feePerPlayer}€ / person (${playerIds.length} players)`
+                  : `—`}
               </div>
             </div>
           </div>
 
-          {allPlayers.length < 14 ? (
+          {allPlayers.length < requiredPlayers ? (
             <div className="warning-box">
-              ⚠️ You need at least 14 players in the database. Currently you have {allPlayers.length}.
+              ⚠️ You need at least {requiredPlayers} players in the database for {format}.
+              Currently you have {allPlayers.length}.
             </div>
           ) : (
             <>
               <PlayerAutocomplete
                 players={allPlayers.filter((p) => !waitlistIds.includes(p.id))}
                 selectedIds={playerIds}
-                maxSelection={14}
-                label="👥 Players (14 required)"
+                maxSelection={requiredPlayers}
+                label={`👥 Players (${requiredPlayers} required for ${format})`}
                 placeholder="Search and add player…"
                 onSelect={(id) => setPlayerIds((prev) => [...prev, id])}
                 onRemove={(id) => setPlayerIds((prev) => prev.filter((x) => x !== id))}
@@ -144,7 +179,7 @@ export function MatchCreatePage() {
           <div className="form-actions">
             <button type="button" className="btn btn-secondary" onClick={() => navigate('/matches')}>Cancel</button>
             <button type="submit" className="btn btn-primary"
-              disabled={playerIds.length !== 14 || !venue.trim() || saving}>
+              disabled={playerIds.length !== requiredPlayers || !venue.trim() || saving}>
               {saving ? '⏳ Creating…' : '🎮 Create Match'}
             </button>
           </div>

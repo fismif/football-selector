@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getMatches, deleteMatch } from '../storage';
 import { useToast } from '../components/Toast';
 import type { Match } from '../types';
+import { FORMAT_PLAYERS } from '../types';
 import { format } from 'date-fns';
 
 export function MatchesPage() {
@@ -77,7 +78,7 @@ export function MatchesPage() {
                   <div className="match-meta">
                     <span>📅 {formattedDate}</span>
                     <span>⏰ {m.time}</span>
-                    <span>👥 {m.playerIds.length}/14 players</span>
+                    <span>👥 {m.playerIds.length}/{FORMAT_PLAYERS[m.format ?? '7v7']} players</span>
                     {assigned && <span className="badge-assigned">✅ Teams assigned</span>}
                   </div>
                 </div>

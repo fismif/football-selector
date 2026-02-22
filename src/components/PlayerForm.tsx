@@ -23,7 +23,7 @@ function Slider({
   onChange: (name: string, value: number) => void;
 }) {
   return (
-    <div className="form-group">
+    <div className="form-group" onPointerDown={() => (document.activeElement as HTMLElement)?.blur()}>
       <div className="slider-header">
         <label className="form-label">{label}</label>
         <span className="slider-value">{value}</span>
@@ -83,7 +83,6 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
           value={form.name}
           onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
           required
-          autoFocus
         />
       </div>
 
