@@ -1515,3 +1515,125 @@ body {
   color: var(--text-primary);
   font-weight: 600;
 }
+
+/* ══════════════════════════════════════════════════
+   MOBILE FIXES ≤ 640px
+   ══════════════════════════════════════════════════ */
+@media (max-width: 640px) {
+
+  /* ── Navbar: wrap brand + links onto separate rows ── */
+  .navbar {
+    height: auto;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    gap: 4px;
+  }
+
+  .navbar-brand {
+    flex: 1;
+    min-width: 0; /* allow text truncation */
+    gap: 6px;
+  }
+
+  .navbar-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+
+  .navbar-title {
+    font-size: 14px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+    max-width: 140px;
+  }
+
+  /* Hide mode badge in navbar on phones – position stays in group card */
+  .navbar .mode-badge {
+    display: none;
+  }
+
+  .navbar-links {
+    width: 100%;
+    justify-content: flex-end;
+    gap: 4px;
+  }
+
+  .nav-link {
+    padding: 6px 10px;
+    font-size: 13px;
+  }
+
+  .navbar-back {
+    font-size: 18px;
+  }
+
+  /* ── Match cards: stack vertically ── */
+  .match-card {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .match-date-badge {
+    flex-shrink: 0;
+  }
+
+  .match-card-body {
+    flex: 1 1 calc(100% - 84px); /* full width minus date badge + actions */
+    min-width: 0;
+  }
+
+  .match-venue {
+    font-size: 14px;
+    white-space: normal;
+  }
+
+  .match-meta {
+    gap: 8px;
+    font-size: 12px;
+  }
+
+  .match-card-actions {
+    margin-left: auto;
+  }
+
+  /* ── Main content side padding ── */
+  .main-content {
+    padding: 16px 14px;
+  }
+
+  /* ── Page header: stack vertically ── */
+  .page-header {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  /* ── Teams grid: full-width single column ── */
+  .teams-grid {
+    grid-template-columns: 1fr;
+  }
+
+  /* ── Team column: tighter padding ── */
+  .team-column {
+    padding: 14px;
+  }
+}
+
+/* ── Hover-only interactions (suppress on touch devices) ── */
+@media (hover: none) {
+  .team-list-item:hover {
+    background: rgba(255, 255, 255, 0.03); /* reset to base, no hover flash */
+  }
+  .match-card:hover {
+    border-color: var(--border-light);
+    box-shadow: none;
+  }
+  .group-card:hover {
+    transform: none;
+    box-shadow: none;
+    border-color: var(--border-light);
+  }
+}
