@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getMatch, getPlayers, getMatches, upsertMatch } from '../storage';
-import { assignTeams } from '../algorithm';
+import { assignTeams, teamAvg } from '../algorithm';
 import { useToast } from '../components/Toast';
 import { useGroup } from '../context/GroupContext';
 import { PlayerHoverCard, useHoverCard } from '../components/PlayerHoverCard';
@@ -21,12 +21,14 @@ function TeamColumn({ title, color, playerIds: teamIds, allPlayers, allMatches }
 }) {
   const { hoverState, onPlayerMouseEnter, onPlayerMouseLeave } = useHoverCard();
   const players = teamIds.map((id) => allPlayers.find((p) => p.id === id)).filter(Boolean) as Player[];
+  const avg = teamAvg(players);
 
   return (
     <>
       <div className={`team-column team-${color}`}>
         <h3 className="team-title">
           {color === 'white' ? '👕' : '🎽'} {title}
+          <span className="team-avg">⭐ {avg}</span>
         </h3>
         <ol className="team-list">
           {players.map((p) => {
@@ -299,17 +301,23 @@ export function MatchDetailPage() {
     }
   }
 
-  /** Reset teams → returns to swap view instead of immediately re-shuffling */
+  /** Instant re-shuffle: re-runs assignTeams with a fresh random seed and saves immediately */
   async function handleReset() {
     if (!match) return;
-    if (!window.confirm('Reset teams? You can swap players then assign again.')) return;
+    setAssigning(true);
     try {
-      const updated: Match = { ...match, teamWhite: [], teamBlack: [] };
+      const selected = match.playerIds
+        .map((pid) => allPlayers.find((p) => p.id === pid))
+        .filter(Boolean) as Player[];
+      const { teamWhite, teamBlack } = assignTeams(selected);
+      const updated: Match = { ...match, teamWhite, teamBlack };
       await upsertMatch(updated);
       setMatch(updated);
-      showToast('Teams cleared — you can now swap players', 'info');
+      showToast('Teams reshuffled! 🔀');
     } catch (e: unknown) {
-      showToast(e instanceof Error ? e.message : 'Reset failed', 'error');
+      showToast(e instanceof Error ? e.message : 'Reshuffle failed', 'error');
+    } finally {
+      setAssigning(false);
     }
   }
 

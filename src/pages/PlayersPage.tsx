@@ -5,7 +5,6 @@ import { useToast } from '../components/Toast';
 import { getPlayers, upsertPlayer, deletePlayer, getMatches } from '../storage';
 import { useGroup } from '../context/GroupContext';
 import type { Player, Match } from '../types';
-import { nanoid } from 'nanoid';
 
 export function PlayersPage() {
   const group = useGroup();
@@ -65,7 +64,7 @@ export function PlayersPage() {
 
   function buildNewPlayer(): Player {
     return {
-      id: nanoid(),
+      id: crypto.randomUUID(),
       groupId: group.id,
       name: '',
       attackDefense: 5,

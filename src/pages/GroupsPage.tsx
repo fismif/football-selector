@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { getGroups, upsertGroup, deleteGroup } from '../storage';
 import { useToast } from '../components/Toast';
 import type { Group, GroupMode } from '../types';
-import { nanoid } from 'nanoid';
 
 export function GroupsPage() {
   const [groups, setGroups] = useState<Group[]>([]);
@@ -33,7 +32,7 @@ export function GroupsPage() {
     if (!newName.trim()) return;
     setSaving(true);
     try {
-      const g = await upsertGroup({ id: nanoid(), name: newName.trim(), mode: newMode });
+      const g = await upsertGroup({ id: crypto.randomUUID(), name: newName.trim(), mode: newMode });
       setGroups((prev) => [...prev, g]);
       setShowCreate(false);
       setNewName('');
