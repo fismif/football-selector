@@ -7,6 +7,7 @@ import { PlayersPage } from './pages/PlayersPage';
 import { MatchesPage } from './pages/MatchesPage';
 import { MatchCreatePage } from './pages/MatchCreatePage';
 import { MatchDetailPage } from './pages/MatchDetailPage';
+import { LoyaltyPage } from './pages/LoyaltyPage';
 import { getGroups } from './storage';
 import type { Group } from './types';
 
@@ -48,6 +49,9 @@ function GroupLayout() {
           <NavLink to={`/groups/${group.id}/matches`} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
             🗓️ Matches
           </NavLink>
+          <NavLink to={`/groups/${group.id}/loyalty`} className={({ isActive }) => isActive ? 'nav-link active' : 'nav-link'}>
+            🏆 Loyalty
+          </NavLink>
         </div>
       </nav>
       <main className="main-content">
@@ -56,6 +60,7 @@ function GroupLayout() {
           <Route path="matches" element={<MatchesPage />} />
           <Route path="matches/new" element={<MatchCreatePage />} />
           <Route path="matches/:id" element={<MatchDetailPage />} />
+          <Route path="loyalty" element={<LoyaltyPage />} />
           <Route path="" element={<Navigate to="matches" replace />} />
         </Routes>
       </main>

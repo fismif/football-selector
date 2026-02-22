@@ -15,33 +15,48 @@ const ALBANIAN_DAYS: Record<number, string> = {
   3: 'E Mërkurë', 4: 'E Enjte', 5: 'E Premte', 6: 'E Shtunë',
 };
 
-// ── Team column (after assignment) ────────────────────────────────────────
-function TeamColumn({ title, color, playerIds: teamIds, allPlayers, allMatches }: {
-  title: string; color: string; playerIds: string[]; allPlayers: Player[]; allMatches: Match[];
+type TeamSlot = 'white' | 'black' | 'waitlist';
+
+// ── Team column with tap-to-select + tap-to-swap ────────────────────────────
+function TeamColumn({ title, color, slot, playerIds: teamIds, allPlayers, allMatches, selectedPlayer, onPlayerClick }: {
+  title: string;
+  color: string;
+  slot: TeamSlot;
+  playerIds: string[];
+  allPlayers: Player[];
+  allMatches: Match[];
+  selectedPlayer: { id: string; from: TeamSlot } | null;
+  onPlayerClick: (id: string, from: TeamSlot) => void;
 }) {
   const { hoverState, onPlayerMouseEnter, onPlayerMouseLeave } = useHoverCard();
   const players = teamIds.map((id) => allPlayers.find((p) => p.id === id)).filter(Boolean) as Player[];
   const avg = teamAvg(players);
+  // This column contains swappable targets when a player from a different slot is selected
+  const hasSwappableTargets = selectedPlayer && selectedPlayer.from !== slot;
 
   return (
     <>
-      <div className={`team-column team-${color}`}>
+      <div className={`team-column team-${color}${hasSwappableTargets ? ' team-targetable' : ''}`}>
         <h3 className="team-title">
-          {color === 'white' ? '👕' : '🎽'} {title}
-          <span className="team-avg">⭐ {avg}</span>
+          {color === 'white' ? '👕' : color === 'black' ? '🎽' : '⏳'} {title}
+          {avg !== '—' && <span className="team-avg">⭐ {avg}</span>}
         </h3>
         <ol className="team-list">
           {players.map((p) => {
             const pos = p.attackDefense <= 3 ? '🛡️' : p.attackDefense <= 6 ? '🔀' : '⚡';
+            const isSelected = selectedPlayer?.id === p.id;
+            const isSwapTarget = !!(hasSwappableTargets && !isSelected);
             return (
               <li
                 key={p.id}
-                className="team-list-item hoverable"
-                onMouseEnter={(e) => onPlayerMouseEnter(p, e)}
+                className={`team-list-item hoverable${isSelected ? ' team-item-selected' : ''}${isSwapTarget ? ' team-item-swappable' : ''}`}
+                onClick={() => onPlayerClick(p.id, slot)}
+                onMouseEnter={(e) => !isSelected && onPlayerMouseEnter(p, e)}
                 onMouseLeave={onPlayerMouseLeave}
               >
                 <span className="team-player-pos">{pos}</span>
                 <span className="team-player-name">{p.name}</span>
+                {isSwapTarget && <span className="swap-indicator">⇄</span>}
               </li>
             );
           })}
@@ -114,14 +129,13 @@ function SwapView({ match, allPlayers, allMatches, onSwap }: {
   onSwap: (newPlayerIds: string[], newWaitlistIds: string[]) => void;
 }) {
   const dragRef = useRef<{ playerId: string; sourceList: 'main' | 'waitlist' } | null>(null);
-  const [dragOver, setDragOver] = useState<string | null>(null); // playerId being dragged over
+  const [dragOver, setDragOver] = useState<string | null>(null);
   const { hoverState, onPlayerMouseEnter, onPlayerMouseLeave } = useHoverCard();
 
   function handleDragStart(e: React.DragEvent, playerId: string, sourceList: 'main' | 'waitlist') {
     dragRef.current = { playerId, sourceList };
     e.dataTransfer.effectAllowed = 'move';
     (e.currentTarget as HTMLElement).classList.add('dragging');
-    // Dismiss hover card immediately while dragging
     onPlayerMouseLeave();
   }
 
@@ -141,11 +155,9 @@ function SwapView({ match, allPlayers, allMatches, onSwap }: {
     let newWait = [...match.waitlistIds];
 
     if (sourceList === 'main' && targetList === 'waitlist') {
-      // sourceId is in main, targetPlayerId is in waitlist — swap them
       newMain = newMain.map((id) => (id === sourceId ? targetPlayerId : id));
       newWait = newWait.map((id) => (id === targetPlayerId ? sourceId : id));
     } else if (sourceList === 'waitlist' && targetList === 'main') {
-      // sourceId is in waitlist, targetPlayerId is in main — swap them
       newMain = newMain.map((id) => (id === targetPlayerId ? sourceId : id));
       newWait = newWait.map((id) => (id === sourceId ? targetPlayerId : id));
     }
@@ -159,7 +171,6 @@ function SwapView({ match, allPlayers, allMatches, onSwap }: {
     if (!dragRef.current) return;
     const { playerId: sourceId, sourceList } = dragRef.current;
     if (sourceList !== 'main' || match.waitlistIds.length > 0) return;
-    // Move to waitlist (only if waitlist was empty)
     const newMain = match.playerIds.filter((id) => id !== sourceId);
     const newWait = [sourceId];
     onSwap(newMain, newWait);
@@ -237,6 +248,8 @@ export function MatchDetailPage() {
   const [allMatches, setAllMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const [assigning, setAssigning] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<{ id: string; from: TeamSlot } | null>(null);
+  const [swapping, setSwapping] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!id) return;
@@ -245,7 +258,6 @@ export function MatchDetailPage() {
       const [m, players, matches] = await Promise.all([getMatch(id), getPlayers(group.id), getMatches(group.id)]);
       setMatch(m);
       setAllPlayers(players);
-      // Exclude current match from participation history (it's in progress)
       setAllMatches(matches.filter((mx) => mx.id !== id));
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Failed to load match', 'error');
@@ -293,6 +305,7 @@ export function MatchDetailPage() {
       const updated: Match = { ...match, teamWhite, teamBlack };
       await upsertMatch(updated);
       setMatch(updated);
+      setSelectedPlayer(null);
       showToast('Teams assigned! ⚽');
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Assignment failed', 'error');
@@ -301,7 +314,7 @@ export function MatchDetailPage() {
     }
   }
 
-  /** Instant re-shuffle: re-runs assignTeams with a fresh random seed and saves immediately */
+  /** Instant re-shuffle */
   async function handleReset() {
     if (!match) return;
     setAssigning(true);
@@ -313,11 +326,52 @@ export function MatchDetailPage() {
       const updated: Match = { ...match, teamWhite, teamBlack };
       await upsertMatch(updated);
       setMatch(updated);
+      setSelectedPlayer(null);
       showToast('Teams reshuffled! 🔀');
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Reshuffle failed', 'error');
     } finally {
       setAssigning(false);
+    }
+  }
+
+  /** True two-player swap: A goes to B's slot, B goes to A's slot */
+  async function handleSwapPlayers(idA: string, fromA: TeamSlot, idB: string, fromB: TeamSlot) {
+    if (!match || fromA === fromB) return;
+    setSwapping(true);
+    try {
+      let { teamWhite, teamBlack, waitlistIds } = match;
+      // Swap A ↔ B by replacing each in their respective list
+      if (fromA === 'white') teamWhite = teamWhite.map((x) => x === idA ? idB : x);
+      else if (fromA === 'black') teamBlack = teamBlack.map((x) => x === idA ? idB : x);
+      else waitlistIds = waitlistIds.map((x) => x === idA ? idB : x);
+
+      if (fromB === 'white') teamWhite = teamWhite.map((x) => x === idB ? idA : x);
+      else if (fromB === 'black') teamBlack = teamBlack.map((x) => x === idB ? idA : x);
+      else waitlistIds = waitlistIds.map((x) => x === idB ? idA : x);
+
+      const updated: Match = { ...match, teamWhite, teamBlack, waitlistIds };
+      await upsertMatch(updated);
+      setMatch(updated);
+      setSelectedPlayer(null);
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Swap failed', 'error');
+    } finally {
+      setSwapping(false);
+    }
+  }
+
+  /** Tap a player: first tap selects, second tap on different team swaps them */
+  function handlePlayerClick(id: string, from: TeamSlot) {
+    if (!selectedPlayer) {
+      setSelectedPlayer({ id, from });
+    } else if (selectedPlayer.id === id) {
+      setSelectedPlayer(null); // deselect same player
+    } else if (selectedPlayer.from === from) {
+      setSelectedPlayer({ id, from }); // change selection within same team
+    } else {
+      // Different team/slot — perform the swap
+      handleSwapPlayers(selectedPlayer.id, selectedPlayer.from, id, from);
     }
   }
 
@@ -390,23 +444,34 @@ export function MatchDetailPage() {
         </div>
       )}
 
-      {/* Post-assignment: team columns */}
+      {/* Post-assignment: team columns with in-place tap-to-move */}
       {assigned && (
         <>
-          <div className="teams-grid">
-            <TeamColumn title="White Team" color="white" playerIds={match.teamWhite} allPlayers={allPlayers} allMatches={allMatches} />
-            <TeamColumn title="Black Team" color="black" playerIds={match.teamBlack} allPlayers={allPlayers} allMatches={allMatches} />
+          {selectedPlayer && (
+            <div className="swap-hint-banner">
+              {swapping ? '⏳ Swapping…' : <>⇄ Now tap any player from the other team to swap with <strong>{allPlayers.find(p => p.id === selectedPlayer.id)?.name ?? '…'}</strong> — or tap them again to deselect</>}
+            </div>
+          )}
+          <div className="teams-grid teams-grid-assigned">
+            <TeamColumn
+              title="White Team" color="white" slot="white"
+              playerIds={match.teamWhite} allPlayers={allPlayers} allMatches={allMatches}
+              selectedPlayer={selectedPlayer} onPlayerClick={handlePlayerClick}
+            />
+            <TeamColumn
+              title="Black Team" color="black" slot="black"
+              playerIds={match.teamBlack} allPlayers={allPlayers} allMatches={allMatches}
+              selectedPlayer={selectedPlayer} onPlayerClick={handlePlayerClick}
+            />
           </div>
 
-          {waitlistPlayers.length > 0 && (
-            <div className="waitlist-section">
-              <h3>⏳ Waiting List</h3>
-              <div className="team-list" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                {waitlistPlayers.map((p) => (
-                  <span key={p.id} className="player-tag">{p.name}</span>
-                ))}
-              </div>
-            </div>
+          {/* Waitlist section — interactive for swaps */}
+          {(waitlistPlayers.length > 0 || selectedPlayer) && (
+            <TeamColumn
+              title="Waitlist" color="wait" slot="waitlist"
+              playerIds={match.waitlistIds} allPlayers={allPlayers} allMatches={allMatches}
+              selectedPlayer={selectedPlayer} onPlayerClick={handlePlayerClick}
+            />
           )}
 
           <WhatsAppTemplate match={match} allPlayers={allPlayers} />

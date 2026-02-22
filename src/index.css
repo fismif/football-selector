@@ -1637,3 +1637,253 @@ body {
     border-color: var(--border-light);
   }
 }
+
+/* ══════════════════════════════════════════════════
+   IN-PLACE TEAM SWAP (post-assignment view)
+   ══════════════════════════════════════════════════ */
+
+/* Teams grid: 2-col on ≥480px, 1-col on mobile */
+.teams-grid-assigned {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 640px) {
+  .teams-grid-assigned { grid-template-columns: 1fr; }
+}
+
+/* Waitlist as slim full-width column */
+.team-wait {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px dashed rgba(245, 158, 11, 0.3);
+}
+
+/* Column that is a valid drop target */
+.team-targetable {
+  border-color: var(--green) !important;
+  box-shadow: 0 0 14px var(--green-glow);
+}
+
+/* Selected player row */
+.team-item-selected {
+  background: rgba(34, 197, 94, 0.12) !important;
+  border: 1px solid var(--green-glow) !important;
+  border-radius: var(--radius-sm);
+}
+
+/* Rows from OTHER teams that are valid swap targets */
+.team-item-swappable {
+  cursor: pointer;
+  background: rgba(34, 197, 94, 0.04);
+}
+.team-item-swappable:hover {
+  background: rgba(34, 197, 94, 0.1) !important;
+}
+
+/* The ⇄ icon on swappable target rows */
+.swap-indicator {
+  margin-left: auto;
+  font-size: 16px;
+  color: var(--green);
+  opacity: 0.7;
+}
+
+/* Loyalty PLAYER header is clickable */
+.loyalty-player-header-btn {
+  cursor: pointer;
+  user-select: none;
+}
+.loyalty-player-header-btn:hover {
+  color: var(--text-primary);
+}
+
+/* Action buttons inside the selected row */
+.team-item-actions {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.team-move-btn {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.12s ease;
+}
+.team-move-btn:hover {
+  border-color: var(--green);
+  color: var(--text-primary);
+  background: var(--green-dim);
+}
+
+/* "Move here" button at top of targetable column */
+.move-here-btn {
+  width: 100%;
+  padding: 8px;
+  border-radius: var(--radius-sm);
+  border: 1px dashed var(--green);
+  background: var(--green-dim);
+  color: var(--green);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s;
+  text-align: center;
+}
+.move-here-btn:hover { background: rgba(34, 197, 94, 0.18); }
+
+/* Hint banner shown when a player is selected */
+.swap-hint-banner {
+  background: rgba(34, 197, 94, 0.07);
+  border: 1px solid var(--green-glow);
+  border-radius: var(--radius-md);
+  padding: 10px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Small btn size */
+.btn-sm {
+  padding: 6px 14px;
+  font-size: 13px;
+}
+
+/* ══════════════════════════════════════════════════
+   LOYALTY PAGE
+   ══════════════════════════════════════════════════ */
+
+.loyalty-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.loyalty-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.loyalty-filter-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  min-width: 44px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.loyalty-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.loyalty-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.loyalty-page-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  flex: 1;
+}
+
+/* Scrollable table wrapper */
+.loyalty-table-wrap {
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-light);
+  background: var(--bg-card);
+}
+
+.loyalty-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 500px;
+}
+
+.loyalty-table th,
+.loyalty-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-light);
+  text-align: center;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.loyalty-table tr:last-child td { border-bottom: none; }
+
+/* Sticky player name column */
+.loyalty-player-header,
+.loyalty-player-cell {
+  position: sticky;
+  left: 0;
+  background: var(--bg-card);
+  text-align: left;
+  z-index: 2;
+  min-width: 120px;
+  max-width: 160px;
+}
+
+.loyalty-player-header { font-size: 11px; color: var(--text-muted); text-transform: uppercase; }
+
+.loyalty-total-header,
+.loyalty-total-cell {
+  font-weight: 700;
+  color: var(--text-primary);
+  min-width: 52px;
+}
+
+.loyalty-match-header {
+  font-size: 11px;
+  color: var(--text-muted);
+  min-width: 52px;
+}
+
+.loyalty-match-date { display: block; }
+.loyalty-match-fmt  { display: block; font-size: 10px; color: var(--text-muted); }
+
+.loyalty-row:hover .loyalty-player-cell,
+.loyalty-row:hover .loyalty-total-cell,
+.loyalty-row:hover td { background: rgba(255,255,255,0.02); }
+
+.loyalty-player-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+}
+
+.loyalty-player-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.loyalty-rate {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* Cell states */
+.loyalty-cell { font-size: 15px; }
+.loyalty-cell-yes { background: rgba(34, 197, 94, 0.08); }
+.loyalty-cell-no  { background: rgba(239, 68, 68, 0.06); color: var(--text-muted); }
+.loyalty-cell-wait { background: transparent; color: var(--text-muted); }
+
+@media (max-width: 640px) {
+  .loyalty-filter-group { align-items: flex-start; flex-direction: column; }
+}
