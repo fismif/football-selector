@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { PlayerAutocomplete } from '../components/PlayerAutocomplete';
 import { useToast } from '../components/Toast';
 import { getPlayers, upsertMatch } from '../storage';
+import { useGroup } from '../context/GroupContext';
 import type { Match, Player, MatchFormat } from '../types';
 import { FORMAT_PLAYERS } from '../types';
 
 const FORMATS: MatchFormat[] = ['4v4', '5v5', '6v6', '7v7'];
 
 export function MatchCreatePage() {
+  const group = useGroup();
   const navigate = useNavigate();
   const { showToast } = useToast();
 
@@ -32,13 +34,12 @@ export function MatchCreatePage() {
   useEffect(() => { showToastRef.current = showToast; });
 
   useEffect(() => {
-    getPlayers()
+    getPlayers(group.id)
       .then(setAllPlayers)
       .catch((e: unknown) => showToastRef.current(e instanceof Error ? e.message : 'Failed to load players', 'error'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [group.id]);
 
-  // When format changes, trim player list if it exceeds the new limit
   useEffect(() => {
     if (playerIds.length > requiredPlayers) {
       setPlayerIds((prev) => prev.slice(0, requiredPlayers));
@@ -58,6 +59,7 @@ export function MatchCreatePage() {
     try {
       const match: Match = {
         id: crypto.randomUUID(),
+        groupId: group.id,
         date,
         time,
         endTime,
@@ -72,7 +74,7 @@ export function MatchCreatePage() {
       };
       await upsertMatch(match);
       showToast('Match created!');
-      navigate(`/matches/${match.id}`);
+      navigate(`/groups/${group.id}/matches/${match.id}`);
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally {
@@ -93,14 +95,11 @@ export function MatchCreatePage() {
         <div className="empty-state"><div className="spinner" />Loading players…</div>
       ) : (
         <form className="match-form" onSubmit={handleSubmit}>
-          {/* Format picker */}
           <div className="form-group">
             <label className="form-label">⚽ Format</label>
             <div className="format-picker">
               {FORMATS.map((f) => (
-                <button
-                  key={f}
-                  type="button"
+                <button key={f} type="button"
                   className={`format-btn${format === f ? ' active' : ''}`}
                   onClick={() => setFormat(f)}
                 >
@@ -141,17 +140,14 @@ export function MatchCreatePage() {
             <div className="form-group">
               <label className="form-label">👤 Per Player (€)</label>
               <div className="form-input fee-display">
-                {playerIds.length > 0
-                  ? `~${feePerPlayer}€ / person (${playerIds.length} players)`
-                  : `—`}
+                {playerIds.length > 0 ? `~${feePerPlayer}€ / person (${playerIds.length} players)` : `—`}
               </div>
             </div>
           </div>
 
           {allPlayers.length < requiredPlayers ? (
             <div className="warning-box">
-              ⚠️ You need at least {requiredPlayers} players in the database for {format}.
-              Currently you have {allPlayers.length}.
+              ⚠️ You need at least {requiredPlayers} players in the database for {format}. Currently you have {allPlayers.length}.
             </div>
           ) : (
             <>
@@ -177,7 +173,7 @@ export function MatchCreatePage() {
           )}
 
           <div className="form-actions">
-            <button type="button" className="btn btn-secondary" onClick={() => navigate('/matches')}>Cancel</button>
+            <button type="button" className="btn btn-secondary" onClick={() => navigate(`/groups/${group.id}/matches`)}>Cancel</button>
             <button type="submit" className="btn btn-primary"
               disabled={playerIds.length !== requiredPlayers || !venue.trim() || saving}>
               {saving ? '⏳ Creating…' : '🎮 Create Match'}

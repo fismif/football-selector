@@ -1,11 +1,21 @@
 import { supabase } from './supabase';
-import type { Player, Match, MatchFormat } from './types';
+import type { Player, Match, MatchFormat, Group, GroupMode } from './types';
 
 // ── helpers: map DB row (snake_case) ↔ app type (camelCase) ────────────────
+
+function rowToGroup(row: Record<string, unknown>): Group {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    mode: (row.mode as GroupMode) ?? 'advanced',
+    createdAt: row.created_at as string,
+  };
+}
 
 function rowToPlayer(row: Record<string, unknown>): Player {
   return {
     id: row.id as string,
+    groupId: (row.group_id as string) ?? '',
     name: row.name as string,
     attackDefense: row.attack_defense as number,
     stamina: row.stamina as number,
@@ -19,6 +29,7 @@ function rowToPlayer(row: Record<string, unknown>): Player {
 function playerToRow(p: Player) {
   return {
     id: p.id,
+    group_id: p.groupId,
     name: p.name,
     attack_defense: p.attackDefense,
     stamina: p.stamina,
@@ -32,6 +43,7 @@ function playerToRow(p: Player) {
 function rowToMatch(row: Record<string, unknown>): Match {
   return {
     id: row.id as string,
+    groupId: (row.group_id as string) ?? '',
     date: row.date as string,
     time: row.time as string,
     endTime: (row.end_time as string) ?? '',
@@ -49,6 +61,7 @@ function rowToMatch(row: Record<string, unknown>): Match {
 function matchToRow(m: Match) {
   return {
     id: m.id,
+    group_id: m.groupId,
     date: m.date,
     time: m.time,
     end_time: m.endTime,
@@ -63,12 +76,39 @@ function matchToRow(m: Match) {
   };
 }
 
+// ── Groups ────────────────────────────────────────────────────────────────────
+
+export async function getGroups(): Promise<Group[]> {
+  const { data, error } = await supabase
+    .from('groups')
+    .select('*')
+    .order('created_at', { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(rowToGroup);
+}
+
+export async function upsertGroup(group: Omit<Group, 'createdAt'>): Promise<Group> {
+  const { data, error } = await supabase
+    .from('groups')
+    .upsert({ id: group.id, name: group.name, mode: group.mode }, { onConflict: 'id' })
+    .select()
+    .single();
+  if (error) throw error;
+  return rowToGroup(data);
+}
+
+export async function deleteGroup(id: string): Promise<void> {
+  const { error } = await supabase.from('groups').delete().eq('id', id);
+  if (error) throw error;
+}
+
 // ── Players ──────────────────────────────────────────────────────────────────
 
-export async function getPlayers(): Promise<Player[]> {
+export async function getPlayers(groupId: string): Promise<Player[]> {
   const { data, error } = await supabase
     .from('players')
     .select('*')
+    .eq('group_id', groupId)
     .order('created_at', { ascending: true });
   if (error) throw error;
   return (data ?? []).map(rowToPlayer);
@@ -88,10 +128,11 @@ export async function deletePlayer(id: string): Promise<void> {
 
 // ── Matches ──────────────────────────────────────────────────────────────────
 
-export async function getMatches(): Promise<Match[]> {
+export async function getMatches(groupId: string): Promise<Match[]> {
   const { data, error } = await supabase
     .from('matches')
     .select('*')
+    .eq('group_id', groupId)
     .order('date', { ascending: false });
   if (error) throw error;
   return (data ?? []).map(rowToMatch);

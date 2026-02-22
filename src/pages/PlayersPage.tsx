@@ -3,9 +3,12 @@ import { PlayerCard } from '../components/PlayerCard';
 import { PlayerForm } from '../components/PlayerForm';
 import { useToast } from '../components/Toast';
 import { getPlayers, upsertPlayer, deletePlayer, getMatches } from '../storage';
+import { useGroup } from '../context/GroupContext';
 import type { Player, Match } from '../types';
+import { nanoid } from 'nanoid';
 
 export function PlayersPage() {
+  const group = useGroup();
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
@@ -14,10 +17,10 @@ export function PlayersPage() {
   const [search, setSearch] = useState('');
   const { showToast } = useToast();
 
-  const refreshPlayers = useCallback(async () => {
+  const refresh = useCallback(async () => {
     try {
       setLoading(true);
-      const [p, m] = await Promise.all([getPlayers(), getMatches()]);
+      const [p, m] = await Promise.all([getPlayers(group.id), getMatches(group.id)]);
       setPlayers(p);
       setMatches(m);
     } catch (e: unknown) {
@@ -25,14 +28,15 @@ export function PlayersPage() {
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [group.id, showToast]);
 
-  useEffect(() => { refreshPlayers(); }, [refreshPlayers]);
+  useEffect(() => { refresh(); }, [refresh]);
 
   async function handleSave(player: Player) {
     try {
-      await upsertPlayer(player);
-      await refreshPlayers();
+      // Ensure groupId is set
+      await upsertPlayer({ ...player, groupId: group.id });
+      await refresh();
       setShowForm(false);
       setEditTarget(null);
       showToast(editTarget ? `${player.name} updated!` : `${player.name} added!`);
@@ -46,7 +50,7 @@ export function PlayersPage() {
     if (window.confirm(`Delete ${player?.name}?`)) {
       try {
         await deletePlayer(id);
-        await refreshPlayers();
+        await refresh();
         showToast(`${player?.name} deleted`, 'error');
       } catch (e: unknown) {
         showToast(e instanceof Error ? e.message : 'Delete failed', 'error');
@@ -59,9 +63,21 @@ export function PlayersPage() {
     setShowForm(true);
   }
 
-  const filtered = players.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  function buildNewPlayer(): Player {
+    return {
+      id: nanoid(),
+      groupId: group.id,
+      name: '',
+      attackDefense: 5,
+      stamina: 7,
+      skills: 7,
+      teamPlayer: 7,
+      physicality: 7,
+      createdAt: new Date().toISOString(),
+    };
+  }
+
+  const filtered = players.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <div className="page">
@@ -83,7 +99,8 @@ export function PlayersPage() {
               <button className="modal-close" onClick={() => { setShowForm(false); setEditTarget(null); }}>×</button>
             </div>
             <PlayerForm
-              initial={editTarget ?? undefined}
+              mode={group.mode}
+              initial={editTarget ?? buildNewPlayer()}
               onSave={handleSave}
               onCancel={() => { setShowForm(false); setEditTarget(null); }}
             />
@@ -102,7 +119,6 @@ export function PlayersPage() {
                 value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
           )}
-
           {players.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">⚽</div>
@@ -119,7 +135,7 @@ export function PlayersPage() {
           ) : (
             <div className="player-grid">
               {filtered.map((p) => (
-                <PlayerCard key={p.id} player={p} recentMatches={matches} onEdit={handleEdit} onDelete={handleDelete} />
+                <PlayerCard key={p.id} player={p} mode={group.mode} recentMatches={matches} onEdit={handleEdit} onDelete={handleDelete} />
               ))}
             </div>
           )}

@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getMatch, getPlayers, getMatches, upsertMatch } from '../storage';
 import { assignTeams } from '../algorithm';
 import { useToast } from '../components/Toast';
-
+import { useGroup } from '../context/GroupContext';
 import { PlayerHoverCard, useHoverCard } from '../components/PlayerHoverCard';
 import type { Match, Player } from '../types';
 import { FORMAT_PLAYERS } from '../types';
@@ -227,6 +227,7 @@ function SwapView({ match, allPlayers, allMatches, onSwap }: {
 // ── Main page ──────────────────────────────────────────────────────────────
 export function MatchDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const group = useGroup();
   const { showToast } = useToast();
 
   const [match, setMatch] = useState<Match | undefined>();
@@ -239,7 +240,7 @@ export function MatchDetailPage() {
     if (!id) return;
     try {
       setLoading(true);
-      const [m, players, matches] = await Promise.all([getMatch(id), getPlayers(), getMatches()]);
+      const [m, players, matches] = await Promise.all([getMatch(id), getPlayers(group.id), getMatches(group.id)]);
       setMatch(m);
       setAllPlayers(players);
       // Exclude current match from participation history (it's in progress)
@@ -249,7 +250,7 @@ export function MatchDetailPage() {
     } finally {
       setLoading(false);
     }
-  }, [id, showToast]);
+  }, [id, group.id, showToast]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -262,7 +263,7 @@ export function MatchDetailPage() {
         <div className="empty-state">
           <div className="empty-icon">🔍</div>
           <h3>Match not found</h3>
-          <Link to="/matches" className="btn btn-secondary">← Back to Matches</Link>
+          <Link to={`/groups/${group.id}/matches`} className="btn btn-secondary">← Back to Matches</Link>
         </div>
       </div>
     );
@@ -331,7 +332,7 @@ export function MatchDetailPage() {
     <div className="page">
       <div className="page-header">
         <div>
-          <Link to="/matches" className="back-link">← Matches</Link>
+          <Link to={`/groups/${group.id}/matches`} className="back-link">← Matches</Link>
           <h1 className="page-title">⚽ Match Details</h1>
         </div>
         {!assigned ? (

@@ -1,20 +1,13 @@
 import { useState, useEffect } from 'react';
-import type { Player } from '../types';
+import type { Player, GroupMode, Position } from '../types';
+import { ATK_DEF_FOR_POSITION, positionFromAttackDefense } from '../types';
 
 interface PlayerFormProps {
-  initial?: Player;
+  mode?: GroupMode;
+  initial: Player;
   onSave: (player: Player) => void;
   onCancel: () => void;
 }
-
-const DEFAULTS = {
-  name: '',
-  attackDefense: 5,
-  stamina: 7,
-  skills: 7,
-  teamPlayer: 7,
-  physicality: 7,
-};
 
 function Slider({
   label, name, value, min, max, onChange,
@@ -46,29 +39,61 @@ function Slider({
   );
 }
 
-export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
-  const [form, setForm] = useState({ ...DEFAULTS, ...initial });
+export function PlayerForm({ mode = 'advanced', initial, onSave, onCancel }: PlayerFormProps) {
+  const [name, setName] = useState(initial.name);
+  // Simplified mode state
+  const [overall, setOverall] = useState(
+    parseFloat(((initial.skills + initial.stamina + initial.physicality + initial.teamPlayer) / 4).toFixed(1))
+  );
+  const [position, setPosition] = useState<Position>(positionFromAttackDefense(initial.attackDefense));
+  // Advanced mode state (sliders)
+  const [form, setForm] = useState({
+    attackDefense: initial.attackDefense,
+    stamina: initial.stamina,
+    skills: initial.skills,
+    teamPlayer: initial.teamPlayer,
+    physicality: initial.physicality,
+  });
 
   useEffect(() => {
-    setForm({ ...DEFAULTS, ...initial });
+    setName(initial.name);
+    setOverall(parseFloat(((initial.skills + initial.stamina + initial.physicality + initial.teamPlayer) / 4).toFixed(1)));
+    setPosition(positionFromAttackDefense(initial.attackDefense));
+    setForm({
+      attackDefense: initial.attackDefense,
+      stamina: initial.stamina,
+      skills: initial.skills,
+      teamPlayer: initial.teamPlayer,
+      physicality: initial.physicality,
+    });
   }, [initial]);
 
-  function handleSlider(name: string, value: number) {
-    setForm((prev) => ({ ...prev, [name]: value }));
+  function handleSlider(n: string, value: number) {
+    setForm((prev) => ({ ...prev, [n]: value }));
   }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.name.trim()) return;
+    if (!name.trim()) return;
+
+    let stats: Pick<Player, 'attackDefense' | 'stamina' | 'skills' | 'teamPlayer' | 'physicality'>;
+    if (mode === 'simplified') {
+      // Expand overall → uniform stats, position → attackDefense
+      stats = {
+        attackDefense: ATK_DEF_FOR_POSITION[position],
+        stamina: overall,
+        skills: overall,
+        teamPlayer: overall,
+        physicality: overall,
+      };
+    } else {
+      stats = form;
+    }
+
     onSave({
-      id: initial?.id ?? crypto.randomUUID(),
-      name: form.name.trim(),
-      attackDefense: form.attackDefense,
-      stamina: form.stamina,
-      skills: form.skills,
-      teamPlayer: form.teamPlayer,
-      physicality: form.physicality,
-      createdAt: initial?.createdAt ?? new Date().toISOString(),
+      ...initial,
+      name: name.trim(),
+      ...stats,
     });
   }
 
@@ -80,22 +105,62 @@ export function PlayerForm({ initial, onSave, onCancel }: PlayerFormProps) {
           className="form-input"
           type="text"
           placeholder="Enter full name..."
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+          value={name}
+          onChange={(e) => setName(e.target.value)}
           required
         />
       </div>
 
-      <Slider label="⚔️ Attack / Defense (0–10)" name="attackDefense" value={form.attackDefense} min={0} max={10} onChange={handleSlider} />
-      <Slider label="💨 Stamina (1–10)" name="stamina" value={form.stamina} min={1} max={10} onChange={handleSlider} />
-      <Slider label="🎯 Skills & Technicality (1–10)" name="skills" value={form.skills} min={1} max={10} onChange={handleSlider} />
-      <Slider label="🤝 Team Player (1–10)" name="teamPlayer" value={form.teamPlayer} min={1} max={10} onChange={handleSlider} />
-      <Slider label="💪 Physicality (1–10)" name="physicality" value={form.physicality} min={1} max={10} onChange={handleSlider} />
+      {mode === 'simplified' ? (
+        <>
+          {/* Overall rating */}
+          <div className="form-group" onPointerDown={() => (document.activeElement as HTMLElement)?.blur()}>
+            <div className="slider-header">
+              <label className="form-label">⭐ Overall Rating</label>
+              <span className="slider-value">{overall.toFixed(1)}</span>
+            </div>
+            <input
+              type="range"
+              className="slider"
+              min={1}
+              max={10}
+              step={0.5}
+              value={overall}
+              onChange={(e) => setOverall(Number(e.target.value))}
+            />
+          </div>
+
+          {/* Position picker */}
+          <div className="form-group">
+            <label className="form-label">🏃 Position</label>
+            <div className="position-picker">
+              {(['DEF', 'MID', 'ATT'] as Position[]).map((pos) => (
+                <button
+                  key={pos}
+                  type="button"
+                  className={`position-btn${position === pos ? ' active' : ''} position-btn-${pos.toLowerCase()}`}
+                  onClick={() => setPosition(pos)}
+                >
+                  {pos === 'DEF' ? '🛡️ DEF' : pos === 'MID' ? '🔀 MID' : '⚡ ATT'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </>
+      ) : (
+        <>
+          <Slider label="⚔️ Attack / Defense (0–10)" name="attackDefense" value={form.attackDefense} min={0} max={10} onChange={handleSlider} />
+          <Slider label="💨 Stamina (1–10)" name="stamina" value={form.stamina} min={1} max={10} onChange={handleSlider} />
+          <Slider label="🎯 Skills & Technicality (1–10)" name="skills" value={form.skills} min={1} max={10} onChange={handleSlider} />
+          <Slider label="🤝 Team Player (1–10)" name="teamPlayer" value={form.teamPlayer} min={1} max={10} onChange={handleSlider} />
+          <Slider label="💪 Physicality (1–10)" name="physicality" value={form.physicality} min={1} max={10} onChange={handleSlider} />
+        </>
+      )}
 
       <div className="form-actions">
         <button type="button" className="btn btn-secondary" onClick={onCancel}>Cancel</button>
         <button type="submit" className="btn btn-primary">
-          {initial ? '💾 Save Changes' : '➕ Add Player'}
+          {initial.name ? '💾 Save Changes' : '➕ Add Player'}
         </button>
       </div>
     </form>

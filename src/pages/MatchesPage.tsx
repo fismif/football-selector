@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { getMatches, deleteMatch } from '../storage';
 import { useToast } from '../components/Toast';
+import { useGroup } from '../context/GroupContext';
 import type { Match } from '../types';
 import { FORMAT_PLAYERS } from '../types';
 import { format } from 'date-fns';
 
 export function MatchesPage() {
+  const group = useGroup();
   const [matches, setMatches] = useState<Match[]>([]);
   const [loading, setLoading] = useState(true);
   const { showToast } = useToast();
@@ -14,13 +16,13 @@ export function MatchesPage() {
   const loadMatches = useCallback(async () => {
     try {
       setLoading(true);
-      setMatches(await getMatches());
+      setMatches(await getMatches(group.id));
     } catch (e: unknown) {
       showToast(e instanceof Error ? e.message : 'Failed to load matches', 'error');
     } finally {
       setLoading(false);
     }
-  }, [showToast]);
+  }, [group.id, showToast]);
 
   useEffect(() => { loadMatches(); }, [loadMatches]);
 
@@ -44,7 +46,7 @@ export function MatchesPage() {
           <h1 className="page-title">🗓️ Matches</h1>
           <p className="page-subtitle">{loading ? 'Loading…' : `${matches.length} matches scheduled`}</p>
         </div>
-        <Link to="/matches/new" className="btn btn-primary">➕ New Match</Link>
+        <Link to={`/groups/${group.id}/matches/new`} className="btn btn-primary">➕ New Match</Link>
       </div>
 
       {loading ? (
@@ -54,7 +56,7 @@ export function MatchesPage() {
           <div className="empty-icon">🗓️</div>
           <h3>No matches yet</h3>
           <p>Create your first match to get started.</p>
-          <Link to="/matches/new" className="btn btn-primary">➕ New Match</Link>
+          <Link to={`/groups/${group.id}/matches/new`} className="btn btn-primary">➕ New Match</Link>
         </div>
       ) : (
         <div className="match-list">
@@ -83,7 +85,7 @@ export function MatchesPage() {
                   </div>
                 </div>
                 <div className="match-card-actions">
-                  <Link to={`/matches/${m.id}`} className="btn btn-secondary btn-sm">View</Link>
+                  <Link to={`/groups/${group.id}/matches/${m.id}`} className="btn btn-secondary btn-sm">View</Link>
                   <button className="btn btn-danger btn-sm" onClick={() => handleDelete(m.id)}>🗑️</button>
                 </div>
               </div>
