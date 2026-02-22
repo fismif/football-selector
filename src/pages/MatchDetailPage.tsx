@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { getMatch, getPlayers, getMatches, upsertMatch } from '../storage';
 import { assignTeams } from '../algorithm';
 import { useToast } from '../components/Toast';
-import { AttributeBar, ParticipationDots } from '../components/PlayerCard';
+
 import { PlayerHoverCard, useHoverCard } from '../components/PlayerHoverCard';
 import type { Match, Player } from '../types';
 import { FORMAT_PLAYERS } from '../types';
