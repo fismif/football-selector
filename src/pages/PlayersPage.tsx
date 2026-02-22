@@ -1,10 +1,39 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { PlayerCard } from '../components/PlayerCard';
 import { PlayerForm } from '../components/PlayerForm';
 import { useToast } from '../components/Toast';
 import { getPlayers, upsertPlayer, deletePlayer, getMatches } from '../storage';
 import { useGroup } from '../context/GroupContext';
 import type { Player, Match } from '../types';
+import { positionFromAttackDefense } from '../types';
+
+// ── Sort helpers ──────────────────────────────────────────────────────────────
+type SortKey = 'rating-desc' | 'rating-asc' | 'participation' | 'position' | 'alpha-asc' | 'alpha-desc';
+
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'rating-desc', label: '⭐ Rating ↓' },
+  { key: 'rating-asc',  label: '⭐ Rating ↑' },
+  { key: 'participation', label: '📊 Participations' },
+  { key: 'position',    label: '🏃 Position' },
+  { key: 'alpha-asc',  label: '🔤 A → Z' },
+  { key: 'alpha-desc', label: '🔤 Z → A' },
+];
+
+const POSITION_ORDER: Record<string, number> = { DEF: 0, MID: 1, ATT: 2 };
+
+function playerOverall(p: Player) {
+  return (p.skills + p.stamina + p.physicality + p.teamPlayer) / 4;
+}
+
+function participationCount(playerId: string, matches: Match[]): number {
+  const played = matches
+    .filter((m) => m.teamWhite.length > 0)
+    .sort((a, b) => b.date.localeCompare(a.date))
+    .slice(0, 5);
+  return played.filter((m) => m.playerIds.includes(playerId)).length;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 export function PlayersPage() {
   const group = useGroup();
@@ -14,6 +43,7 @@ export function PlayersPage() {
   const [editTarget, setEditTarget] = useState<Player | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState('');
+  const [sortKey, setSortKey] = useState<SortKey>('rating-desc');
   const { showToast } = useToast();
 
   const refresh = useCallback(async () => {
@@ -33,7 +63,6 @@ export function PlayersPage() {
 
   async function handleSave(player: Player) {
     try {
-      // Ensure groupId is set
       await upsertPlayer({ ...player, groupId: group.id });
       await refresh();
       setShowForm(false);
@@ -76,7 +105,36 @@ export function PlayersPage() {
     };
   }
 
-  const filtered = players.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  // Filter then sort
+  const sorted = useMemo(() => {
+    const filtered = players.filter((p) =>
+      p.name.toLowerCase().includes(search.toLowerCase())
+    );
+
+    if (group.mode !== 'simplified') return filtered; // no custom sort in advanced mode
+
+    return [...filtered].sort((a, b) => {
+      switch (sortKey) {
+        case 'rating-desc': return playerOverall(b) - playerOverall(a);
+        case 'rating-asc':  return playerOverall(a) - playerOverall(b);
+        case 'participation': {
+          const pA = participationCount(a.id, matches);
+          const pB = participationCount(b.id, matches);
+          return pB - pA; // most participations first
+        }
+        case 'position': {
+          const posA = POSITION_ORDER[positionFromAttackDefense(a.attackDefense)] ?? 0;
+          const posB = POSITION_ORDER[positionFromAttackDefense(b.attackDefense)] ?? 0;
+          return posA !== posB ? posA - posB : playerOverall(b) - playerOverall(a);
+        }
+        case 'alpha-asc':  return a.name.localeCompare(b.name);
+        case 'alpha-desc': return b.name.localeCompare(a.name);
+        default: return 0;
+      }
+    });
+  }, [players, search, sortKey, matches, group.mode]);
+
+  const isSimplified = group.mode === 'simplified';
 
   return (
     <div className="page">
@@ -112,12 +170,31 @@ export function PlayersPage() {
       ) : (
         <>
           {players.length > 0 && (
-            <div className="search-bar">
-              <span className="search-icon">🔍</span>
-              <input className="form-input" type="text" placeholder="Search players…"
-                value={search} onChange={(e) => setSearch(e.target.value)} />
-            </div>
+            <>
+              {/* Search bar */}
+              <div className="search-bar">
+                <span className="search-icon">🔍</span>
+                <input className="form-input" type="text" placeholder="Search players…"
+                  value={search} onChange={(e) => setSearch(e.target.value)} />
+              </div>
+
+              {/* Sort bar — simplified mode only */}
+              {isSimplified && (
+                <div className="sort-bar">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.key}
+                      className={`sort-btn${sortKey === opt.key ? ' active' : ''}`}
+                      onClick={() => setSortKey(opt.key)}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
           )}
+
           {players.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">⚽</div>
@@ -125,7 +202,7 @@ export function PlayersPage() {
               <p>Add your first player to get started.</p>
               <button className="btn btn-primary" onClick={() => setShowForm(true)}>➕ Add Player</button>
             </div>
-          ) : filtered.length === 0 ? (
+          ) : sorted.length === 0 ? (
             <div className="empty-state">
               <div className="empty-icon">🔍</div>
               <h3>No players found</h3>
@@ -133,7 +210,7 @@ export function PlayersPage() {
             </div>
           ) : (
             <div className="player-grid">
-              {filtered.map((p) => (
+              {sorted.map((p) => (
                 <PlayerCard key={p.id} player={p} mode={group.mode} recentMatches={matches} onEdit={handleEdit} onDelete={handleDelete} />
               ))}
             </div>
